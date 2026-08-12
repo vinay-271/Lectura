@@ -1,4 +1,4 @@
-# NoteTube AI - Architecture Document
+# Lectura - Architecture Document
 
 **Version**: 0.1
 **Status**: Draft
@@ -9,7 +9,7 @@
 ## 1. Project Overview
 
 ### 1.1 Purpose
-NoteTube AI is a Chrome Extension that generates textbook-quality notes from YouTube educational videos using Google's Gemini AI.
+Lectura is a Chrome Extension that generates textbook-quality notes from YouTube educational videos using Google's Gemini AI.
 
 ### 1.2 Goals
 - Provide students/learners with structured notes from video content
@@ -75,7 +75,7 @@ NoteTube AI is a Chrome Extension that generates textbook-quality notes from You
 ## 3. Folder Structure
 
 ```
-notetube-ai/
+lectura/
 │
 ├── backend/
 │   ├── app/

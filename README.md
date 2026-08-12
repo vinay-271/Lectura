@@ -1,10 +1,10 @@
-# NoteTube AI
+# Lectura
 
 A Chrome Extension that generates textbook-quality notes from YouTube educational videos using AI.
 
 ## Overview
 
-NoteTube AI transforms YouTube educational content into structured, timestamped notes with AI-generated summaries, key screenshots, and navigation. Built as a college major project with a production-grade architecture.
+Lectura transforms YouTube educational content into structured, timestamped notes with AI-generated summaries, key screenshots, and navigation. Built as a college major project with a production-grade architecture.
 
 ## Features (MVP)
 
@@ -28,7 +28,7 @@ NoteTube AI transforms YouTube educational content into structured, timestamped 
 ## Project Structure
 
 ```
-notetube-ai/
+lectura/
 │
 ├── backend/          # FastAPI backend
 ├── extension/        # Chrome Extension (React + Vite)
