@@ -4,6 +4,8 @@ from models.request import GenerateNotesRequest
 
 from utils.youtube import extract_video_id
 
+from services.transcript import get_transcript
+
 app = FastAPI()
 
 
@@ -16,8 +18,11 @@ def health_check():
 def generate_notes(request: GenerateNotesRequest):
     video_id = extract_video_id(str(request.youtube_url))
 
+    transcript = get_transcript(video_id)
+
     return {
-        "message": "Hello from Lectura Backend",
+        "message": "Transcript retrieved successfully",
         "youtube_url": str(request.youtube_url),
-        "video_id": video_id
+        "video_id": video_id,
+        "transcript": transcript
     }
