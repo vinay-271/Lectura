@@ -1,0 +1,630 @@
+LECTURA — EXTENSION FRONTEND PROGRESS & NEXT STEPS
+============================================================
+
+Purpose
+-------
+This document records what has been completed in the Lectura Chrome extension frontend so far, the current architecture, what is working, and what remains to be done to complete the first major frontend functionality: generating detailed notes from a YouTube video.
+
+PROJECT CONTEXT
+---------------
+Lectura is an AI-powered Chrome extension intended to turn educational YouTube videos into structured study notes. The frontend is being developed separately from the backend so UI and extension functionality can progress without waiting for the backend.
+
+Frontend stack currently used:
+- React
+- TypeScript
+- Vite
+- Chrome Extension APIs / Manifest V3
+- ESLint
+- Git/GitHub
+
+CURRENT WORKING DIRECTORY
+--------------------------
+The frontend lives inside:
+
+    extension/
+
+The React/Vite application was initialized inside the existing extension folder.
+
+BUILD STATUS
+------------
+The production build has been successfully tested multiple times using:
+
+    npm run build
+
+The build currently completes without TypeScript or Vite errors.
+
+CHROME EXTENSION SETUP COMPLETED
+---------------------------------
+- React + TypeScript + Vite project initialized in extension/
+- Chrome extension manifest created in public/manifest.json
+- Service worker created and copied into the production build
+- Extension successfully loaded into Chrome
+- Chrome Side Panel is working
+- Production build output is generated in dist/
+- Extension has been repeatedly reloaded and tested in Chrome
+
+INITIAL UI
+----------
+The default Vite starter UI was removed and replaced with a Lectura interface.
+
+Current main UI pieces:
+- Lectura header
+- AI study assistant subtitle
+- Ready-to-learn / Generate Notes action card
+- Current Video information card
+- Generation status area
+- Detailed Notes section
+- Note cards with numbering and timestamps
+- Basic responsive side-panel styling
+
+DESIRED PRODUCT DIRECTION
+-------------------------
+The larger intended Lectura design includes:
+1. Idle / Ready state
+2. Processing state
+3. Summary view
+4. Detailed Notes view
+5. Mind Map view
+6. Takeaways view
+7. Settings / More
+
+For the FIRST completed frontend functionality, scope has intentionally been limited to:
+
+    YouTube video detection
+        ->
+    Generate Notes
+        ->
+    Processing state
+        ->
+    Detailed Notes
+
+Summary, Mind Map, Takeaways, Settings, Save Notes, etc. are NOT part of the current first milestone.
+
+CURRENT FRONTEND FILE STRUCTURE
+-------------------------------
+src/
+├── components/
+│   ├── GenerateButton.tsx
+│   ├── GenerationStatus.tsx
+│   ├── Header.tsx
+│   ├── NotesView.tsx
+│   └── VideoInfo.tsx
+│
+├── services/
+│   ├── api.ts
+│   ├── chrome.ts
+│   ├── mockApi.ts
+│   ├── mockData.ts
+│   ├── notes.ts
+│   └── youtube.ts
+│
+├── types/
+│   ├── api.ts
+│   ├── errors.ts
+│   └── generation.ts
+│
+├── utils/
+│   └── youtube.ts
+│
+├── App.css
+├── App.tsx
+├── index.css
+└── main.tsx
+
+WHAT HAS BEEN IMPLEMENTED
+--------------------------
+
+1. YouTube / Active Tab Detection
+---------------------------------
+The extension can detect the currently active tab and determine whether it is a supported YouTube video.
+
+Implemented utility/service functionality includes:
+- Getting the current active tab
+- Checking whether the current URL is a YouTube video
+- Extracting the YouTube video ID
+
+Supported URL handling includes standard YouTube watch URLs and youtu.be-style URLs.
+
+The extension correctly shows an error when the user is not currently on a YouTube video:
+
+    "Please open a YouTube video."
+
+The active YouTube URL is also detected when the Side Panel opens, rather than only after clicking Generate Notes.
+
+2. YouTube Video ID Extraction
+------------------------------
+A utility was added:
+
+    getYouTubeVideoId(url)
+
+It extracts the video ID from the YouTube URL.
+
+The current VideoInfo component displays the video ID rather than the full URL.
+
+Example:
+
+    https://www.youtube.com/watch?v=XXXXXXXXXXX
+                        ->
+    XXXXXXXXXXX
+
+The original URL is retained as the title/hover value.
+
+3. Generate Notes UI
+--------------------
+GenerateButton was created and now:
+- Detects the current YouTube video
+- Starts note generation
+- Disables itself while generation is running
+- Displays "Generating..." on the button while loading
+- Passes generated notes and the YouTube URL back to App
+
+The UI was changed from a plain button to a proper action card containing:
+- "Ready to learn?"
+- Description
+- Generate Notes button
+
+4. Generation State Management
+------------------------------
+Generation status was moved into App.
+
+Current generation states:
+
+    idle
+    generating
+    success
+    error
+
+GenerationStatus component displays the appropriate message.
+
+Current flow:
+
+    idle
+      ->
+    generating
+      ->
+    success
+
+or:
+
+    generating
+      ->
+    error
+
+The mock API has a 1.5 second artificial delay so the generating state can be visually tested.
+
+5. Error Handling
+-----------------
+A typed GenerationError was introduced.
+
+Current errors:
+- invalid-youtube-url
+- generation-failed
+
+The UI distinguishes the invalid YouTube case from a general generation failure.
+
+Current user-facing messages include:
+- "Please open a YouTube video."
+- "Generating detailed notes..."
+- "Notes generated successfully."
+- "Failed to generate notes."
+
+6. Detailed Notes UI
+--------------------
+NotesView was created.
+
+It displays:
+- "Detailed Notes" heading
+- Numbered note cards
+- Note heading
+- Note content
+- Optional timestamp
+
+Example structure:
+
+    01  Introduction to Machine Learning
+        Explanation...
+        00:42
+
+    02  Supervised Learning
+        Explanation...
+        04:18
+
+The notes are styled as individual cards.
+
+7. VideoInfo UI
+---------------
+VideoInfo was created and styled.
+
+It currently displays:
+- Current video label
+- Extracted YouTube video ID
+
+The component appears automatically when a YouTube video is detected.
+
+8. Typed API Contract
+---------------------
+The API response type is centralized in:
+
+    src/types/api.ts
+
+Current response model:
+
+    GenerateNotesResponse
+        - title
+        - summary
+        - notes[]
+
+Each note uses:
+
+    NoteResponse
+        - heading
+        - content
+        - timestamp? (optional)
+        - image? (optional)
+
+The Note type was removed from NotesView so the API type is now the single source of truth.
+
+9. API Service
+--------------
+A real API service exists in:
+
+    src/services/api.ts
+
+Current endpoint configuration:
+
+    http://localhost:8000/generate-notes
+
+Current request:
+
+    POST /generate-notes
+
+Body:
+
+    {
+      "youtube_url": "..."
+    }
+
+The API service returns a typed GenerateNotesResponse.
+
+IMPORTANT:
+The real API is NOT currently being used by the UI.
+
+10. Mock API
+------------
+A mock backend is implemented for independent frontend development.
+
+Files:
+- services/mockApi.ts
+- services/mockData.ts
+
+mockApi returns a GenerateNotesResponse using mock note data.
+
+A 1.5 second artificial delay was added to simulate backend processing time.
+
+The mock data is kept separately in mockData.ts.
+
+11. API Abstraction Layer
+-------------------------
+A single entry point was created:
+
+    src/services/notes.ts
+
+Current behavior:
+
+    generateVideoNotes()
+        ->
+    mockGenerateNotes()
+
+GenerateButton calls generateVideoNotes() instead of calling mockGenerateNotes() directly.
+
+This means the UI is isolated from the mock/real implementation.
+
+When backend integration is ready, notes.ts can be changed to call the real API service without rewriting the GenerateButton UI.
+
+CURRENT FRONTEND FLOW
+---------------------
+Current working flow:
+
+    Side Panel opens
+          |
+          v
+    Detect active tab
+          |
+          v
+    Is it a YouTube video?
+       /                 No              Yes
+     |                |
+     v                v
+  Normal UI      Show VideoInfo
+                      |
+                      v
+               Generate Notes
+                      |
+                      v
+                 Generating
+                      |
+                      v
+                 Mock API
+                      |
+                      v
+                  Success
+                      |
+                      v
+               Detailed Notes
+
+CURRENT STATE OF UI
+-------------------
+Idle:
+- Lectura header
+- AI study assistant subtitle
+- Current video information when on YouTube
+- Ready to learn card
+- Generate Notes button
+
+Generating:
+- Generate button is hidden/disabled by state
+- GenerationStatus displays generating message
+
+Success:
+- Current video information
+- Success message
+- Detailed Notes cards
+
+The state transitions have been tested successfully in Chrome.
+
+CURRENT STYLING STATUS
+----------------------
+The frontend currently has basic functional styling:
+- Header styling
+- Green ready/status indicator
+- Generate Notes card
+- Generate button
+- Current video card
+- Detailed Notes cards
+- Note numbering
+- Timestamps
+- Basic spacing, borders, typography
+
+The UI is functional but is NOT yet a pixel-perfect implementation of the provided Lectura reference design.
+
+IMPORTANT ARCHITECTURAL DECISIONS
+----------------------------------
+1. App owns application-level state.
+2. GenerateButton handles the user action and calls the notes service.
+3. GenerationStatus displays the current generation state.
+4. NotesView only renders notes.
+5. VideoInfo only renders current video information.
+6. services/ handles external communication.
+7. types/ contains shared data contracts.
+8. utils/ contains reusable YouTube parsing logic.
+9. Mock API is intentionally separated from the real API.
+10. The UI should not directly depend on mock API implementation.
+
+WHAT IS NOT COMPLETED YET
+-------------------------
+
+A. Real Backend Integration
+---------------------------
+The most important next technical step is to connect:
+
+    generateVideoNotes()
+        ->
+    real api.ts
+        ->
+    FastAPI backend
+
+The backend team needs to confirm:
+- Exact endpoint URL
+- Exact request body
+- Exact response JSON
+- Whether authentication is required
+- Whether processing is synchronous or asynchronous
+- Error response format
+- Whether title/summary are returned
+- Exact note structure
+- Whether timestamps are returned
+- Whether images/screenshots are returned
+
+Current frontend assumption:
+
+    POST http://localhost:8000/generate-notes
+
+    {
+      "youtube_url": "..."
+    }
+
+This must be verified against the actual backend implementation before switching from mock to real API.
+
+B. Real API Switching
+---------------------
+Once the backend contract is confirmed, update:
+
+    src/services/notes.ts
+
+so generateVideoNotes() calls the real API instead of mockGenerateNotes().
+
+The UI should remain unchanged as much as possible.
+
+C. Real Backend Error Handling
+------------------------------
+The current errors are frontend-defined:
+
+    invalid-youtube-url
+    generation-failed
+
+Once the backend is connected, inspect actual HTTP error responses and map them into meaningful frontend errors.
+
+D. Processing UX
+----------------
+The current processing state is intentionally simple.
+
+The reference design shows:
+- Processing percentage
+- Current processing stage
+- Video info extraction
+- Audio/transcript extraction
+- Note generation
+
+The frontend should eventually support a more detailed processing UI if the backend can provide meaningful progress information.
+
+If the backend cannot provide real progress, use stage-based status rather than fake percentages.
+
+E. Final Lectura Visual Design
+------------------------------
+The current UI is functional but still needs refinement to match the provided reference design.
+
+Future visual improvements:
+- Dark theme / Lectura branding
+- Purple accent colors
+- Proper Lectura logo/icon
+- More polished typography
+- Better card styling
+- Better spacing for Chrome Side Panel dimensions
+- Processing illustration/loading indicator
+- Proper success state
+- Better note hierarchy
+- Optional collapsible note sections
+- Better timestamp styling
+- Possible video thumbnail
+
+Do not over-polish before the backend response is finalized.
+
+F. Detailed Notes Content Model
+--------------------------------
+The current NoteResponse is:
+
+    heading
+    content
+    timestamp?
+    image?
+
+The exact final note structure may need to change once the backend AI output is finalized.
+
+If backend returns richer structured notes (sections, bullets, subpoints, key terms, etc.), update the frontend type and NotesView accordingly.
+
+G. Title and Summary
+--------------------
+GenerateNotesResponse already supports:
+
+    title
+    summary
+
+But the current NotesView does not display them.
+
+Once the backend returns meaningful title/summary data, add them to the successful notes screen.
+
+H. Current Video Information
+----------------------------
+VideoInfo currently shows only the video ID.
+
+Later it should ideally show:
+- Video title
+- Thumbnail
+- Possibly channel
+- Possibly duration
+
+These should come from reliable actual data, not hardcoded frontend values.
+
+I. Persistence / Saving
+-----------------------
+Not part of the first milestone yet.
+
+Future functionality shown in the reference design includes:
+- Save Notes
+- Notes Library
+- Export Notes
+
+These can be implemented after the first note-generation flow is stable.
+
+J. Additional Views
+-------------------
+Future components:
+- SummaryView
+- MindMapView
+- TakeawaysView
+- SettingsView
+- NotesLibraryView
+
+These are intentionally postponed.
+
+RECOMMENDED ORDER TO COMPLETE FRONTEND
+--------------------------------------
+
+Phase 1 — Backend Integration
+1. Get final backend API contract from backend teammate.
+2. Update api.ts if necessary.
+3. Change notes.ts from mock API to real API.
+4. Test successful real generation.
+5. Test backend failure cases.
+6. Confirm response mapping.
+
+Phase 2 — Processing UX
+1. Confirm what progress information backend provides.
+2. Implement processing stages.
+3. Add cancellation only if backend supports cancellation.
+4. Avoid fake percentage values unless explicitly agreed.
+
+Phase 3 — Detailed Notes UI
+1. Display actual backend title.
+2. Display actual backend summary.
+3. Render actual structured notes.
+4. Handle long notes cleanly.
+5. Handle missing/optional timestamps.
+6. Handle optional images if backend provides them.
+
+Phase 4 — Visual Polish
+1. Apply final Lectura dark/purple visual identity.
+2. Add proper logo/icon.
+3. Improve typography.
+4. Refine cards and spacing.
+5. Optimize for Chrome Side Panel dimensions.
+6. Match the approved reference design.
+
+Phase 5 — Future Features
+1. Summary
+2. Mind Map
+3. Takeaways
+4. Save Notes
+5. Notes Library
+6. Export
+7. Settings
+8. Future-video auto-generation if required
+
+CURRENT IMMEDIATE NEXT STEP
+----------------------------
+Do NOT start another large frontend refactor.
+
+The immediate next step should be:
+
+    Get backend contract
+        ->
+    Verify /generate-notes
+        ->
+    Connect notes.ts to api.ts
+        ->
+    Test real generated notes
+
+The mock API should remain available until the real backend flow is confirmed working. It is useful as a frontend fallback during development.
+
+FINAL STATUS
+------------
+Frontend first milestone status:
+
+    Chrome Extension Setup          DONE
+    React + TypeScript + Vite       DONE
+    Side Panel                      DONE
+    YouTube Detection               DONE
+    Video ID Extraction             DONE
+    Generate Notes UI               DONE
+    Generation State                DONE
+    Error Handling                  DONE
+    Detailed Notes UI               DONE
+    Video Info                      DONE
+    Typed API Contract              DONE
+    Mock API                        DONE
+    API Abstraction                 DONE
+    Real Backend Integration        PENDING
+    Final UI Polish                 PENDING
+    Additional Lectura Views        PENDING
+
+The frontend is therefore at a good point to pause independently and resume from backend integration later.

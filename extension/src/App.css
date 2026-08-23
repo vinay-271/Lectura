@@ -1,0 +1,161 @@
+/* Basic layout styles for the Lectura side panel. */
+
+main {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.notes-section {
+  margin-top: 28px;
+}
+
+.notes-title {
+  margin: 0 0 16px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.note-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #f9fafb;
+}
+
+.note-number {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: #9ca3af;
+}
+
+.note-content {
+  min-width: 0;
+}
+
+.note-content h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.note-content p {
+  margin: 8px 0 10px;
+  color: #4b5563;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.note-timestamp {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* Styles for the note generation action area. */
+
+.generate-section {
+  margin-bottom: 28px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f9fafb;
+}
+
+.generate-content h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.generate-content p {
+  margin: 8px 0 16px;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.generate-button {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.generate-button:hover {
+  background: #1f2937;
+}
+
+.generate-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Styles for the currently selected YouTube video. */
+
+.video-info {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.video-info-label {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.video-info-url {
+  margin: 0;
+  overflow: hidden;
+  color: #374151;
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

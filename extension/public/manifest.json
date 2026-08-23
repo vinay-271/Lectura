@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Lectura",
+  "version": "0.1.0",
+  "description": "Generate structured notes from educational YouTube videos.",
+  "permissions": [
+    "sidePanel",
+    "tabs"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "Open Lectura"
+  },
+  "side_panel": {
+    "default_path": "index.html"
+  }
+}
