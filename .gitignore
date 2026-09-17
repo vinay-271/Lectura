@@ -5,6 +5,7 @@ __pycache__/
 *.so
 .Python
 venv/
+.venv/
 env/
 ENV/
 .pytest_cache/
@@ -55,3 +56,13 @@ Desktop.ini
 .env.production
 *.db
 *.sqlite
+
+# Video processing (Member 3) — runtime output and large local test files
+backend/temp/
+test.mp4
+*.mp4
+!backend/tests/**/*.mp4
+
+# Local workspace & pre-push safety archive (not part of the project)
+.freebuff/
+.git-team-archive/
