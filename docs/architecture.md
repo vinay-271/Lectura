@@ -1,571 +1,320 @@
-# Lectura — Architecture & Project Plan
+# Lectura - Architecture Document
+
+**Version**: 0.1
+**Status**: Draft
+**Last Updated**: 2024
+
+---
 
 ## 1. Project Overview
 
-**Lectura** is a Chrome Extension that helps students turn educational YouTube videos into structured, textbook-quality notes.
+### 1.1 Purpose
+Lectura is a Chrome Extension that generates textbook-quality notes from YouTube educational videos using Google's Gemini AI.
 
-The core idea is simple:
+### 1.2 Goals
+- Provide students/learners with structured notes from video content
+- Enable timestamp-based navigation back to source material
+- Extract visual context (screenshots) alongside text
+- Deliver as a lightweight browser extension
 
-> **Watch less. Understand more.**
-
-A user opens an educational YouTube video, opens Lectura, and requests notes. Lectura processes the video, extracts its transcript and important visual information, sends the relevant information to the AI pipeline, and returns structured notes and a concise summary.
-
-The MVP is focused on educational YouTube videos.
-
----
-
-## 2. MVP Goals
-
-The first version of Lectura will support:
-
-- Detecting the currently opened YouTube video
-- Extracting the video's transcript
-- Identifying important visual moments
-- Extracting important screenshots
-- Generating detailed AI-powered notes
-- Generating a short summary
-- Displaying notes and screenshots in the Chrome extension
-- Clicking timestamps to jump to that point in the YouTube video
-- Loading/progress states
-- Error handling
-
-### Out of Scope for MVP
-
-The following will **not** be built initially:
-
-- User accounts
-- Authentication
-- Database
-- Note history
-- Payments
-- Cloud storage
-- Flashcards
-- Quiz generation
-- Notion export
-- Multiple AI providers
-- Collaboration features
-
-These may be considered after the MVP is stable.
+### 1.3 Non-Goals (MVP)
+- User accounts / authentication
+- Flashcards / quiz generation
+- PDF export
+- Multi-language support
+- Video download
+- Offline mode
 
 ---
 
-## 3. System Architecture
+## 2. System Architecture
 
-The high-level data flow is:
-
-```text
-┌─────────────────────────────┐
-│        YouTube Video        │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│     Lectura Chrome          │
-│        Extension            │
-│                             │
-│ React + TypeScript          │
-│ Chrome Side Panel           │
-└──────────────┬──────────────┘
-               │
-               │ POST /generate-notes
-               ▼
-┌─────────────────────────────┐
-│       FastAPI Backend       │
-│                             │
-│ Transcript Processing       │
-│ Video Processing            │
-│ AI Pipeline                 │
-└──────────────┬──────────────┘
-               │
-       ┌───────┴────────┐
-       ▼                ▼
-┌──────────────┐  ┌──────────────┐
-│  Transcript  │  │    Video     │
-│  Extraction  │  │  Processing  │
-└──────┬───────┘  └──────┬───────┘
-       │                 │
-       │           OpenCV / FFmpeg
-       │                 │
-       └────────┬────────┘
-                ▼
-       ┌─────────────────┐
-       │  Gemini AI      │
-       │  Multimodal     │
-       └────────┬────────┘
-                │
-                ▼
-       ┌─────────────────┐
-       │ Structured Notes│
-       │ + Summary       │
-       │ + Screenshots   │
-       └────────┬────────┘
-                │
-                ▼
-       ┌─────────────────┐
-       │ Chrome Extension│
-       │       UI        │
-       └─────────────────┘
+```
+┌─────────────────┐     HTTPS      ┌─────────────────┐
+│  Chrome Ext     │ ──────────────▶│  FastAPI        │
+│  (React + TS)   │ ◀──────────────│  Backend        │
+└─────────────────┘  JSON Response  └────────┬────────┘
+                                             │
+                              ┌──────────────┼──────────────┐
+                              ▼              ▼              ▼
+                       ┌───────────┐  ┌───────────┐  ┌───────────┐
+                       │YouTube    │  │Gemini AI  │  │FFmpeg/    │
+                       │Transcript │  │API        │  │OpenCV     │
+                       │API        │  │           │  │           │
+                       └───────────┘  └───────────┘  └───────────┘
 ```
 
----
+### 2.1 Components
 
-## 4. Technology Stack
+| Component | Technology | Responsibility |
+|-----------|------------|----------------|
+| Extension Popup | React + TypeScript | UI, user interaction, display results |
+| Content Script | TypeScript | YouTube page detection, DOM interaction |
+| Background Script | TypeScript | Message routing, API calls |
+| FastAPI Server | Python 3.12 | REST API, orchestration |
+| Transcript Service | youtube-transcript-api | Extract captions |
+| Video Processor | OpenCV + FFmpeg | Keyframe extraction, scene detection |
+| AI Service | Google Generative AI | Notes & summary generation |
 
-### Backend
+### 2.2 Data Flow
 
-- Python 3.12
-- FastAPI
-- Uvicorn
-- Pydantic
-- Gemini API
-
-### Frontend / Extension
-
-- React
-- TypeScript
-- Vite
-- Tailwind CSS
-- Chrome Extension Manifest V3
-- Chrome Side Panel API
-
-### Video Processing
-
-- OpenCV
-- FFmpeg
-
-### Version Control
-
-- Git
-- GitHub
+1. User navigates to YouTube video
+2. Content script detects video ID, sends to popup
+3. User clicks "Generate Notes" in popup
+4. Popup sends `POST /generate-notes` with YouTube URL
+5. Backend:
+   - Extracts transcript
+   - Downloads video, extracts keyframes
+   - Sends transcript + frames to Gemini
+   - Returns structured notes
+6. Extension displays notes with timestamps & images
+7. User clicks timestamp → video seeks to position
 
 ---
 
-## 5. Repository Structure
+## 3. Folder Structure
 
-The repository starts with the following structure:
-
-```text
-Lectura/
+```
+lectura/
 │
 ├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── routes.py          # /generate-notes endpoint
+│   │   ├── core/
+│   │   │   ├── config.py          # Settings, env vars
+│   │   │   └── security.py        # API key validation
+│   │   ├── models/
+│   │   │   └── schemas.py         # Pydantic models
+│   │   ├── services/
+│   │   │   ├── transcript.py      # YouTube transcript extraction
+│   │   │   ├── video_processor.py # FFmpeg/OpenCV keyframes
+│   │   │   └── gemini.py          # AI notes generation
+│   │   └── main.py                # FastAPI app entry
+│   ├── requirements.txt
+│   ├── .env.example
+│   └── tests/
+│
 ├── extension/
+│   ├── public/
+│   │   └── manifest.json          # Manifest V3
+│   ├── src/
+│   │   ├── background/
+│   │   │   └── index.ts           # Service worker
+│   │   ├── content/
+│   │   │   └── index.ts           # YouTube page script
+│   │   ├── popup/
+│   │   │   ├── App.tsx            # Main popup component
+│   │   │   ├── components/        # UI components
+│   │   │   ├── hooks/             # Custom React hooks
+│   │   │   ├── types/             # TypeScript interfaces
+│   │   │   └── api.ts             # Backend API client
+│   │   └── styles/
+│   │       └── globals.css        # Tailwind imports
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── vite.config.ts
+│   └── tailwind.config.js
+│
 ├── docs/
-│   └── architecture.md
+│   └── architecture.md            # This file
 │
 ├── .gitignore
 ├── README.md
 └── LICENSE
 ```
 
-Detailed internal structures will be created incrementally as each part of the project is implemented.
-
-We will avoid creating unnecessary folders or files before their purpose is established.
-
 ---
 
-## 6. Team Responsibilities
+## 4. API Contract
 
-### Member 1 — Backend + AI
+### POST `/generate-notes`
 
-Responsible for the core backend and AI pipeline.
-
-Responsibilities:
-
-- FastAPI backend
-- API endpoints
-- Transcript extraction
-- AI pipeline
-- Gemini API integration
-- Prompt engineering
-- Structured note generation
-- Summary generation
-- API schemas
-- Backend error handling
-- Integration of video-processing services
-- Future PDF generation
-
-Primary branch:
-
-```text
-backend-ai
-```
-
----
-
-### Member 2 — Chrome Extension + UI
-
-Responsible exclusively for the extension and user interface.
-
-Responsibilities:
-
-- Chrome Extension Manifest V3
-- React + TypeScript
-- Chrome Side Panel
-- YouTube URL detection
-- Backend communication
-- Loading states
-- Notes rendering
-- Screenshot rendering
-- Timestamp navigation
-- Error states
-- Export UI
-
-Primary branch:
-
-```text
-extension-ui
-```
-
-The extension developer does not implement AI or video-processing logic.
-
----
-
-### Member 3 — Video Processing
-
-Responsible for video intelligence and processing.
-
-Responsibilities:
-
-- OpenCV
-- FFmpeg
-- Scene detection
-- Important-frame detection
-- Screenshot extraction
-- Duplicate screenshot prevention
-- Image optimization
-- Image compression
-- OCR if required
-- Processing benchmarks
-- Video-processing tests
-
-Primary branch:
-
-```text
-video-processing
-```
-
-This module should remain independent from the FastAPI API layer as much as possible.
-
----
-
-## 7. Git Branch Strategy
-
-The repository currently uses five branches:
-
-```text
-main
-develop
-backend-ai
-extension-ui
-video-processing
-```
-
-### `main`
-
-Stable, tested, release-ready code.
-
-### `develop`
-
-Integration branch where completed work from the three development branches is combined and tested.
-
-### `backend-ai`
-
-Backend and AI development.
-
-### `extension-ui`
-
-Chrome extension and UI development.
-
-### `video-processing`
-
-Video processing development.
-
-### Development Flow
-
-```text
-backend-ai ────────┐
-                    │
-extension-ui ──────┼──► develop ───► main
-                    │
-video-processing ──┘
-```
-
-Development branches should not directly modify unrelated modules without coordination.
-
-The API contract should remain stable so that all three members can work independently.
-
----
-
-## 8. API Contract
-
-The primary MVP API endpoint is:
-
-```http
-POST /generate-notes
-```
-
-### Request
-
+**Request**
 ```json
 {
-  "youtube_url": "https://youtu.be/..."
+  "youtube_url": "https://youtu.be/dQw4w9WgXcQ"
 }
 ```
 
-### Response
-
+**Response** (200 OK)
 ```json
 {
-  "title": "",
-  "summary": "",
+  "title": "Video Title",
+  "summary": "AI-generated summary...",
   "notes": [
     {
-      "heading": "",
-      "content": "",
-      "timestamp": "",
-      "image": ""
+      "heading": "Introduction",
+      "content": "Detailed notes content...",
+      "timestamp": "0:00",
+      "image": "base64_or_url"
     }
   ]
 }
 ```
 
-### Notes Object
+**Error Response** (4xx/5xx)
+```json
+{
+  "detail": "Error message",
+  "code": "TRANSCRIPT_NOT_FOUND"
+}
+```
 
-| Field | Description |
-|---|---|
-| `heading` | Topic or section heading |
-| `content` | Detailed explanation |
-| `timestamp` | Relevant point in the video |
-| `image` | Important screenshot associated with the note |
-
-This contract is the primary integration boundary between the backend and extension.
-
-Changes to the contract should be discussed and agreed upon before implementation.
+### Error Codes
+| Code | HTTP | Description |
+|------|------|-------------|
+| `INVALID_URL` | 400 | Not a valid YouTube URL |
+| `TRANSCRIPT_NOT_FOUND` | 404 | No captions available |
+| `VIDEO_DOWNLOAD_FAILED` | 502 | Could not fetch video |
+| `GEMINI_API_ERROR` | 502 | AI service failure |
+| `RATE_LIMITED` | 429 | Too many requests |
 
 ---
 
-## 9. Core Data Flow
+## 5. Data Models
 
-The MVP follows this sequence:
+### Backend (Pydantic)
 
-```text
-1. User opens YouTube
-        ↓
-2. User opens Lectura
-        ↓
-3. Extension detects current YouTube URL
-        ↓
-4. User clicks "Generate Notes"
-        ↓
-5. Extension sends YouTube URL to backend
-        ↓
-6. Backend obtains transcript
-        ↓
-7. Video-processing pipeline identifies important frames
-        ↓
-8. Important screenshots are extracted
-        ↓
-9. Transcript + visual information are provided to Gemini
-        ↓
-10. Gemini generates structured notes
-        ↓
-11. Backend returns structured JSON
-        ↓
-12. Extension renders summary, notes and screenshots
-        ↓
-13. User clicks timestamp
-        ↓
-14. YouTube jumps to the relevant moment
+```python
+# app/models/schemas.py
+class NoteItem(BaseModel):
+    heading: str
+    content: str
+    timestamp: str  # "MM:SS" or "HH:MM:SS"
+    image: Optional[str] = None  # base64 or URL
+
+class GenerateNotesRequest(BaseModel):
+    youtube_url: HttpUrl
+
+class GenerateNotesResponse(BaseModel):
+    title: str
+    summary: str
+    notes: List[NoteItem]
+```
+
+### Frontend (TypeScript)
+
+```typescript
+// src/popup/types/index.ts
+export interface NoteItem {
+  heading: string;
+  content: string;
+  timestamp: string;
+  image?: string;
+}
+
+export interface GenerateNotesResponse {
+  title: string;
+  summary: string;
+  notes: NoteItem[];
+}
 ```
 
 ---
 
-## 10. Development Philosophy
+## 6. Team Responsibilities
 
-Lectura will be developed incrementally.
+| Member | Role | Primary Areas |
+|--------|------|---------------|
+| Member 1 | **Frontend Lead** | Extension UI, popup, content script, Tailwind styling, API integration |
+| Member 2 | **Backend Lead** | FastAPI, Gemini prompts, transcript extraction, video processing, deployment |
+| Member 3 | **Full-Stack** | Integration testing, CI/CD, architecture docs, cross-cutting concerns, unblocking |
 
-We will:
-
-1. Build one component at a time.
-2. Explain the purpose of each file before creating it.
-3. Keep modules independent.
-4. Test each milestone before moving forward.
-5. Commit after meaningful completed work.
-6. Keep the API contract stable.
-7. Avoid premature complexity.
-8. Integrate through `develop`.
-9. Keep the MVP focused.
-10. Add advanced features only after the MVP works reliably.
-
-We will **not** build the entire project at once.
+### Communication
+- Daily 15-min standup (async or sync)
+- Weekly integration test session
+- PR reviews required (1 approval)
+- Architecture changes = team consensus
 
 ---
 
-## 11. Development Roadmap
+## 7. Development Workflow
 
-### Stage 0 — Foundation
-
-- Repository setup
-- Folder structure
-- Git branches
-- Architecture documentation
-- MVP definition
-- API contract
-
-**Goal:** Establish a stable foundation.
-
----
-
-### Stage 1 — Communication Pipeline
-
-Build the simplest possible end-to-end connection:
-
-```text
-Chrome Extension
-       ↓
-FastAPI
-       ↓
-"Hello from Backend"
-       ↓
-Chrome Extension
+### Git Flow
+```
+main (protected)
+  ↑ PR (monthly)
+develop (integration)
+  ↑ PR (per feature)
+feature/<short-name>
 ```
 
-**Goal:** Prove that the extension and backend can communicate successfully.
+### Branch Naming
+- `feat/<description>` - New feature
+- `fix/<description>` - Bug fix
+- `refactor/<description>` - Code improvement
+- `docs/<description>` - Documentation
 
----
-
-### Stage 2 — Transcript Extraction
-
-Implement:
-
-- YouTube URL handling
-- Transcript retrieval
-- Transcript validation
-- Error handling
-
-**Goal:** Backend can reliably obtain the video's textual content.
-
----
-
-### Stage 3 — Video Processing
-
-Implement:
-
-- Video/frame access
-- Scene detection
-- Important-frame detection
-- Screenshot extraction
-- Duplicate prevention
-- Image optimization
-
-**Goal:** Produce useful screenshots with timestamps.
-
----
-
-### Stage 4 — AI Integration
-
-Implement:
-
-- Gemini integration
-- Prompt engineering
-- Transcript + visual context
-- Structured note generation
-- Summary generation
-
-**Goal:** Produce high-quality educational notes.
-
----
-
-### Stage 5 — Frontend Integration
-
-Implement:
-
-- Notes rendering
-- Summary rendering
-- Screenshots
-- Timestamp navigation
-- Loading states
-- Error handling
-
-**Goal:** Complete end-to-end MVP.
-
----
-
-### Stage 6 — Polish & Release
-
-Implement:
-
-- UI refinement
-- Performance improvements
-- Edge-case handling
-- Testing
-- Documentation
-- Deployment
-- Demo preparation
-
-**Goal:** Produce a polished, portfolio-quality release.
-
----
-
-## 12. MVP Milestone
-
-The MVP is considered complete when a user can:
-
-```text
-Open an educational YouTube video
-            ↓
-Open Lectura
-            ↓
-Click "Generate Notes"
-            ↓
-Wait for processing
-            ↓
-Receive a short summary
-            ↓
-Read structured notes
-            ↓
-View relevant screenshots
-            ↓
-Click a timestamp
-            ↓
-Jump to that point in the video
+### Commit Convention
+```
+feat: add transcript extraction service
+fix: handle missing captions gracefully
+refactor: simplify gemini prompt builder
+docs: update api contract in architecture.md
 ```
 
-Everything beyond this flow is secondary until this works reliably.
+### Definition of Done
+- [ ] Code compiles, no lint errors
+- [ ] Works locally (frontend + backend)
+- [ ] Unit tests pass (backend)
+- [ ] Manual test in Chrome extension
+- [ ] No console errors
+- [ ] `architecture.md` updated if API changes
+- [ ] PR merged to `develop`
 
 ---
 
-## 13. Future Roadmap
+## 8. Future Roadmap (Post-MVP)
 
-After the MVP is stable, possible future features include:
+### Phase 2 (Month 2-3)
+- [ ] Flashcard generation from notes
+- [ ] Quiz generation
+- [ ] PDF/Markdown export
+- [ ] User settings (AI model, note detail level)
+- [ ] Side panel UI (alternative to popup)
 
-- PDF export
-- Flashcards
-- Quiz generation
-- Note history
-- User accounts
-- Notion export
-- Multiple AI models
-- Cloud storage
-- Sharing notes
-- Collaborative study features
-
-These features should not interfere with the initial MVP development.
+### Phase 3 (Future)
+- [ ] User accounts & cloud sync
+- [ ] Multi-language transcript support
+- [ ] Playlist/batch processing
+- [ ] Community notes sharing
+- [ ] Mobile companion app
 
 ---
 
-## 14. Project Principle
+## 9. Appendix
 
-> **Build the smallest complete version first, then make it better.**
+### 9.1 Environment Variables
 
-Lectura should prioritize reliability, clean architecture, useful output, and a good user experience over unnecessary features.
+**Backend (`.env`)**
+```
+GEMINI_API_KEY=your_key_here
+BACKEND_CORS_ORIGINS=["chrome-extension://<extension_id>"]
+LOG_LEVEL=INFO
+```
 
-The first goal is not to build a huge platform.
+**Extension (`.env`)**
+```
+VITE_API_URL=http://localhost:8000
+```
 
-The first goal is to make:
+### 9.2 Key Dependencies
 
-**YouTube → Lectura → High-quality notes**
+**Backend**
+- `fastapi`, `uvicorn`, `pydantic`, `pydantic-settings`
+- `google-generativeai`, `youtube-transcript-api`
+- `opencv-python`, `ffmpeg-python`
+- `httpx`, `python-dotenv`
 
-work extremely well.
-architecture.md
-Displaying architecture.md.
+**Extension**
+- `react`, `react-dom`, `typescript`
+- `vite`, `@vitejs/plugin-react`
+- `tailwindcss`, `postcss`, `autoprefixer`
+- `axios` or native `fetch`
+
+### 9.3 References
+- [Chrome Extensions MV3 Docs](https://developer.chrome.com/docs/extensions/mv3/)
+- [FastAPI Tutorial](https://fastapi.tiangolo.com/tutorial/)
+- [Gemini API Docs](https://ai.google.dev/docs)
+- [FFmpeg Keyframe Extraction](https://stackoverflow.com/a/5286222)
